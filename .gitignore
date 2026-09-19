@@ -1,1 +1,11 @@
 .DS_Store
+
+Datos/processed/*
+Datos/raw/*
+!Datos/raw/.gitkeep
+!Datos/processed/.gitkeep
+
+
+
+
+
