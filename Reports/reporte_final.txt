@@ -1,0 +1,841 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{xcolor}
+
+\pgfplotsset{compat=1.18}
+
+\title[Random Forest vs MLP]{Detección de intrusiones en redes}
+\subtitle{Comparación entre Random Forest y MLP sobre CICIDS-2017}
+
+\author{Lucas Calierno}
+
+\institute{
+Universidad Nacional del Sur
+}
+
+
+\date{Septiembre 2026}
+
+\begin{document}
+
+%------------------------------------------------------------------------
+
+\begin{frame}
+    \titlepage
+    \centering
+    Métodos para el análisis de datos I
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{¿Por qué detectar intrusiones?}
+
+\begin{itemize}
+
+    \item Las redes modernas generan grandes cantidades de tráfico continuamente.
+
+    \item Entre ese tráfico puede existir actividad maliciosa, como ataques, escaneos, intentos de acceso no autorizado, entre otras.
+
+    \item Un Sistema de Detección de Intrusiones (IDS) busca identificar automáticamente este comportamiento en tiempo real.
+
+    \item El machine-learning permite automatizar esta tarea a partir de características extraídas del mismo tráfico de red.
+
+\end{itemize}
+
+\vspace{0.4cm}
+
+\begin{block}{Objetivo}
+Clasificar los tipos de tráficos utilizando modelos de machine-learning.
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Problema planteado}
+
+El trabajo busca comparar dos enfoques:
+
+\vspace{0.3cm}
+
+\begin{columns}
+
+\column{0.48\textwidth}
+
+\begin{block}{Machine Learning clásico}
+\centering
+\Large Random Forest
+\end{block}
+
+\begin{itemize}
+    \item Modelo basado en árboles.
+    \item Muy utilizado en datos tabulares.
+    \item Robusto y relativamente simple.
+\end{itemize}
+
+\column{0.48\textwidth}
+
+\begin{block}{Deep Learning}
+\centering
+\Large MLP
+\end{block}
+
+\begin{itemize}
+    \item Red neuronal multicapa.
+    \item Gran capacidad para aprender relaciones no lineales.
+    \item Mayor cantidad de parámetros y ajuste.
+\end{itemize}
+
+\end{columns}
+
+\vspace{0.4cm}
+
+\begin{block}{Pregunta}
+¿Vale la pena un el costo de un modelo de Deep Learning para datos estructurados?
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Paper de referencia}
+
+\textbf{Ali et al. (2025)}
+
+\vspace{0.2cm}
+
+\textit{
+Deep Learning vs. Machine Learning for Intrusion Detection
+in Computer Networks: A Comparative Study
+}
+
+\vspace{0.4cm}
+
+\begin{itemize}
+
+    \item Estudia diferentes modelos clásicos y de Deep Learning para detección de intrusiones.
+
+    \item Utiliza el dataset CICIDS-2017.
+
+    \item entre sus conclusiones principales, se encuentra que los modelos clásicos pueden superar a los modelos profundos en este problema.
+
+\end{itemize}
+
+\vspace{0.3cm}
+
+\begin{block}{Idea del trabajo}
+Replicar el análisis utilizando Random Forest y MLP, y comparar los resultados obtenidos con los del paper
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Acerca del dataset CICIDS-2017}
+
+\textbf{Canadian Institute for Cybersecurity Intrusion Detection
+Evaluation Dataset 2017}
+
+\vspace{0.3cm}
+
+\begin{itemize}
+
+    \item Dataset de tráfico de red utilizado para evaluar sistemas IDS.
+
+    \item Contiene tráfico capturado durante cinco días.
+
+    \item Incluye tráfico benigno y diferentes tipos de ataques.
+
+    \item La versión original contiene:
+
+    \begin{itemize}
+        \item 2.830.743 registros.
+        \item 79 columnas.
+        \item Una variable objetivo denominada 'Label'.
+    \end{itemize}
+
+\end{itemize}
+
+\vspace{0.3cm}
+
+El dataset fue obtenido del siguiente link: https://cicresearch.ca/CICDataset/CIC-IDS-2017/
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Preprocesamiento: Tratamiento de variables predictoras}
+
+Los datos fueron tratados previos al modelado. 
+
+\begin{itemize}
+    \item Se reportaron 308381 datos duplicados. Estos fueron eliminados para evitar malas lecturas.
+
+    \item Se reportaron 353 valores faltantes. Los mismas fueron reemplazados por la respectiva media. Este método fue usado debido a que es simple y efectivo para datos numéricos. Además, se evitó eliminar posibles datos que podrían ser importantes.
+
+    \item Se reportaron 3128 valores infinitos, tanto positivos como negativos. Se decidió quitar tales registros para evitar posibles errores.
+
+    \item Se dividió el conjunto de datos en entrenamiento $(80\%)$ y prueba $(20\%)$
+
+    \item Se estandarizó el conjunto de datos de entrenamiento, y luego se aplicó la transformación al conjunto de prueba
+
+    \item Se evaluó la correlación, y se encontraron 34 variables con un coeficiente de correlación mayor a 0,85. En estos casos se eliminó una de las variables, para reducir redundancia
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Preprocesamiento: Tratamiento de variable objetivo}
+
+La variable objetivo ('Label') representa el tipo de tráfico. Entre las categorías encontramos la clase benign, que indica tráfico normal, y 14 tipos más de ataque.
+
+\begin{columns}
+
+\column{0.48\textwidth}
+
+\begin{itemize}
+    \item BENIGN
+    \item DoS Hulk
+    \item DDoS
+    \item PortScan
+    \item DoS GoldenEye
+    \item DoS slowloris
+    \item DoS Slowhttptest
+\end{itemize}
+
+\column{0.48\textwidth}
+
+\begin{itemize}
+    \item FTP-Patator
+    \item SSH-Patator
+    \item Bot
+    \item Web Attack -- Brute Force
+    \item Web Attack -- XSS
+    \item Web Attack -- SQL Injection
+    \item Infiltration
+    \item Heartbleed
+\end{itemize}
+
+\end{columns}
+
+\vspace{0.3cm}
+
+Para simplificar la clasificación, las etiquetas fueron consolidadas en siete clases.
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Preprocesamiento: Tratamiento de variable objetivo}
+
+Se utilizó el siguiente agrupamiento:
+
+\begin{center}
+
+\begin{tabular}{ll}
+
+\toprule
+
+\textbf{Etiquetas originales} & \textbf{Clase final} \\
+
+\midrule
+
+BENIGN & BENIGN \\
+
+DoS Hulk, DoS GoldenEye, DoS slowloris, Dos Slowhttptest & DoS \\
+
+DDoS & DDoS \\
+
+PortScan & PortScan \\
+
+Bot & Bot \\
+
+Web Attack -- Brute Force, Web Attack -- XSS, Web Attack -- SQL Injection & Web Attack \\
+
+Hearthbleed, Infiltration, FTP-Patator, SSH-Patator & Other \\
+
+\bottomrule
+
+\end{tabular}
+
+\end{center}
+
+\vspace{0.4cm}
+
+La idea es categorizar la variable objetivo entre los principales tipos de ataques. El agrupamiento fue seguido del paper de referencia.
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Preprocesamiento: Tratamiento de variable objetivo}
+
+Otro problema con la variable objetivo, son las frecuencias:
+
+\begin{center}
+
+\begin{tabular}{lr}
+
+\toprule
+
+\textbf{Clase} & \textbf{Cantidad} \\
+
+\midrule
+
+BENIGN & 2.095.057\\
+Dos & 193.745\\
+DDoS & 128.014\\
+PortScan & 90.694\\
+Other & 9.197\\
+Web Atack & 2.143\\
+Bot & 1.948\\
+
+\bottomrule
+
+\end{tabular}
+
+\end{center}
+
+\vspace{0.2cm}
+
+\begin{alertblock}{Problema}
+Existe un fuerte desbalance entre clases. La clase 'Benign' domina ampliamente.
+\end{alertblock}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Preprocesamiento: Tratamiento de variable objetivo}
+
+El desbalance entre clases puede provocar errores en el modelado, y una baja detección de las clases minoritarias. Para abordar el problema del desbalance entre clases, se decidió aplicar SMOTE (Sinthetic Over-Sampling Technique).
+
+Esta técnica genera nuevas observaciones sintéticas de las clases minoritarias a partir de las ya existentes. Esto permite aumentar la cantidad de observaciones, sin duplicar observaciones
+
+El resultado es un dataset balanceado, con igual cantidad de observaciones en cada clase.
+
+\vspace{0.2cm}
+
+\begin{block}{Importante}
+SMOTE se aplica sobre el conjunto de entrenamiento unicamente
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Preprocesamiento: Pipeline de preprocesamiento}
+
+\begin{enumerate}
+
+    \item Eliminación de duplicados.
+    \item Imputación de valores faltantes por respectiva media.
+    \item Eliminación de valores infinitos.
+    \item Consolidación de etiquetas en variable objetivo.
+    \item División train/test.
+    \item Estandarización.
+    \item Eliminacion de variables correlacionadas.
+    \item SMOTE sobre train.
+
+\end{enumerate}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Random Forest: Marco teórico - Árboles de decisión}
+
+Un árbol de decisión divide los datos mediante una secuencia de reglas hasta llegar a una predicción. Este realiza una serie de preguntas sobre una característica particular del dato, hasta llegar a una predicción
+
+\begin{block}{Ventajas}
+
+\begin{itemize}
+    \item Son fáciles de interpretar.
+    \item Pueden capturar relaciones no lineales.
+    \item No requieren asumir una distribución específica de los datos.
+\end{itemize}
+
+\end{block}
+
+\vspace{0.2cm}
+
+\begin{alertblock}{Principal desventaja}
+Los árboles de decisión presentan una varianza muy alta, pues pequeños cambios en los datos generan árboles muy distintos
+\end{alertblock}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Random Forest: Marco teórico - Idea general}
+
+Para solucionar esto, se introduce el concepto de Random Forest
+
+\begin{block}{¿Qué es Random Forest?}
+Random Forest es un algoritmo de aprendizaje supervisado que combina múltiples árboles de decisión para realizar una predicción.
+\end{block}
+
+\begin{itemize}
+    \item Cada árbol realiza una predicción de manera independiente.
+    \item Los árboles se construyen utilizando diferentes muestras de los datos y subconjuntos de variables.
+    \item Finalmente, se combinan las predicciones de todos los árboles.
+\end{itemize}
+
+\vspace{0.3cm}
+
+La idea intuitiva es, un árbol puede equivocarse, muchos árboles a la vez es más raro. El modelo se vuelve más estable y robusto a los cambios. Para lograrlo, los árboles tienen que ser distintos entre sí.
+
+\end{frame}
+
+%------------------------------------------------------------------------
+\begin{frame}{Random Forest: ventajas y limitaciones}
+
+A continuación se presentan las principales ventajas y limitaciones de este método
+
+\begin{columns}[T]
+
+\column{0.48\textwidth}
+
+\begin{block}{Ventajas}
+\begin{itemize}
+    \item Robusto frente a ruido y variaciones en los datos.
+    \item Reduce la varianza respecto de un único árbol.
+    \item Puede capturar relaciones no lineales.
+    \item Requiere poca preparación de los datos.
+    \item Difícil sobreajustarlo.
+\end{itemize}
+\end{block}
+
+\column{0.48\textwidth}
+
+\begin{alertblock}{Limitaciones}
+\begin{itemize}
+    \item Predicciones lentas en tiempo real debido a la cantidad de árboles
+    \item Tiene un consumo de memoria elevado.
+    \item Difícil de interpretar una predicción.
+    \item Un bosque muy grande puede aumentar mucho el costo computacional.
+\end{itemize}
+\end{alertblock}
+
+\end{columns}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Random Forest: hiperparámetros elegidos}
+
+Se eligieron los siguientes hiperparámetros:
+
+\begin{center}
+
+\begin{tabular}{ll}
+
+\toprule
+
+\textbf{Parámetro} & \textbf{Valor} \\
+
+\midrule
+
+\texttt{n\_estimators} & 100\\
+\texttt{random\_state} & 42\\
+\texttt{n\_jobs} & 1\\
+
+\bottomrule
+
+\end{tabular}
+
+\end{center}
+
+\begin{itemize}
+    \item \texttt{n\_estimators}: cantidad de árboles de decisión. Elegido como balance entre capacidad de predicción y costo computacional.
+    \item \texttt{random\_state}: Fijación de semilla aleatoria. No aporta ventaja estadística
+    \item \texttt{n\_jobs}: cantidad de procesos utilizados. Se eligió 1 empíricamente para menor costo computacional
+\end{itemize}
+
+\vspace{0.3cm}
+
+El resto de hiperparámetros utilizados se dejaron por defecto los de la librería sklearn
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: Marco teórico - Neuronas artificiales}
+
+\begin{block}{¿Que es una neurona artificial?}
+    Es una unidad de procesamiento que recibe entradas, las combina linealmente, suma un sesgo y aplica una función de activación para producir una salida.
+\end{block}
+
+Cada neurona realiza una transformación:
+
+\begin{equation*}
+    y = \sigma(z), \qquad \text{donde} \qquad z = \sum_i w_i x_i + b
+\end{equation*}
+
+\begin{itemize}
+    \item $x_i$: valores de entrada.
+    \item $w_i$: pesos de cada entrada. Indican la importancia de cada una.
+    \item $b$: sesgo (bias). Permite ajustar el umbral.
+    \item $\sigma$: función de activación. Decide si la neurona se "prende" o no
+    \item $y$: salida de la neurona.
+\end{itemize}
+    
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: Marco teórico - Idea general}
+
+\begin{block}{¿Que es Multilayer Perceptron (MLP)?}
+    Es una red neuronal, que organiza varias neuronas artificiales, y las apila en forma de capas
+\end{block}
+
+\vspace{0.3cm}
+
+Las capas de neuronas se dividen en tres grupos:
+
+\vspace{0.2cm}
+
+\begin{itemize}
+    \item Capa de entrada: Primera capa de neuronas que reciben los datos 
+    \item Capas ocultas: Capas intermedias que procesan la información, y aprenden las relaciones mas complejas.
+    \item Capa de salida: Capa final encargada de realizar la predicción.
+\end{itemize}
+
+\vspace{0.3cm}
+
+Cada capa de neuronas aprende relaciones más complejas de los datos. Con suficientes capas, se puede aproximar cualquier función, sin importar su complejidad.
+    
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: Marco teórico - Ventajas y limitaciones}
+
+A continuación, se presentan las principales ventajas y limitaciones de este método
+
+\begin{columns}[T]
+
+\column{0.48\textwidth}
+
+\begin{block}{Ventajas}
+\begin{itemize}
+    \item Captura relaciones y patrones complejos entre las variables
+    \item Permite ajustar su arquitectura como cantidad de capas y neuronas, para optimizar su rendimiento
+    \item Es un modelo muy flexible, que se puede adaptar para muchos usos.
+\end{itemize}
+\end{block}
+
+\column{0.48\textwidth}
+
+\begin{alertblock}{Limitaciones}
+\begin{itemize}
+    \item Requiere ajuste de muchos hiperparámetros.
+    \item Es fácil caer en un sobreajuste si el modelo es demasiado complejo en comparación a los datos
+    \item Entrenamiento costoso computacionalmente.
+    \item Muy dificil de explicar las predicciones realizadas.
+\end{itemize}
+\end{alertblock}
+
+\end{columns}
+    
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: arquitectura utilizada}
+
+Se utilizó la siguiente arquitectura
+
+\begin{center}
+
+\[
+\boxed{\text{Entradas}}
+\rightarrow
+\boxed{100}
+\rightarrow
+\boxed{50}
+\rightarrow
+\boxed{\text{6 clases}}
+\]
+
+\end{center}
+
+\begin{itemize}
+    \item Capa de entrada: Recibe información del dataset.
+    \item 2 Capas ocultas, de 100 y 50 neuronas, respectivamente. Fueron elegidas como un balance entre capturar las relaciones de las variables, manteniendo un costo computacional razonable. 
+    \item Activación: ReLU. Es la función de activación estándar, debido a su simplicidad computacional
+    \item Optimizador: Adam. Método basado en descenso por gradiente
+    \item Capa de salida multiclase. Es la encargada de realizar las predicciones.
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: hiperparámetros utilizados}
+
+Los principales hiperparámetros utilizados fueron: 
+
+\vspace{0.4cm}
+
+\begin{center}
+    
+\small
+
+\begin{tabular}{ll}
+
+\toprule
+
+\textbf{Parámetro} & \textbf{Valor}\\
+
+\midrule
+
+\texttt{hidden\_layer\_sizes} & (100, 50)\\
+\texttt{activation} & ReLU\\
+\texttt{solver} & Adam\\
+\texttt{alpha} & 0.0001\\
+\texttt{batch\_size} & 512\\
+\texttt{learning\_rate\_init} & 0.0001\\
+\texttt{max\_iter} & 100\\
+\texttt{early\_stopping} & True\\
+\texttt{validation\_fraction} & 0.1\\
+\texttt{n\_iter\_no\_change} & 5\\
+
+\bottomrule
+
+\end{tabular}
+
+\end{center}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Resultados: Métricas}
+
+Los resultados generales del modelo fueron:
+
+\vspace{0.4cm}
+
+\begin{tabular}{c|c|c|c|c}
+
+\toprule
+
+Modelo & Accuracy & Precision (macro) & Recall (macro) & F1-score (macro) \\
+
+\midrule
+
+MLP & 0.97 & 0.69 & 0.99 & 0.75 \\
+
+\midrule
+
+Random Forest & 0.99 & 0.94 & 0.98 & 0.96 \\
+
+\bottomrule
+
+\end{tabular}
+
+\vspace{0.4cm}
+
+Podemos observar que el modelo Random forest supera al MLP en Accuracy, Precision y F1-score, mientras que el modelo MLP presenta mayor Recall
+
+\vspace{0.3cm}
+
+\begin{block}{Pregunta}
+    Podemos concluir que Random Forest es mejor modelo que MLP?
+\end{block}
+    
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Resultados: Matrices de confusión }
+
+\begin{center}
+
+\includegraphics[width=0.75\textwidth]{Confusion_matrix.png}
+
+\end{center}
+
+\vspace{0.1cm}
+
+Se presentan las matrices de confusión de ambos modelos, que comparan la clase real vs la clase predicha. 
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Resultados: Curvas ROC}
+
+\begin{center}
+
+\includegraphics[width=0.5\textwidth]{Curvas_ROC.png}
+
+\end{center}
+
+\vspace{0.1cm}
+
+Se observa que ambos modelos presentan una curva casi perfectamente cuadrada, lo que refleja el buen desempeño de los modelos.
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Resultados: propios vs paper}
+    
+\begin{center}
+
+\begin{tabular}{lcccc}
+
+\toprule
+
+& \textbf{RF paper} & \textbf{MLP paper} & \textbf{RF propio} & \textbf{MLP propio}\\
+
+\midrule
+
+Accuracy & 99,88\% & 97,00\% & 99,86\% & 97,42\%\\
+
+F1 macro & 97,46\% & 82,00\% & 96,08\% & 75,28\%\\
+
+F1 ponderado & 100,00\% & 98,00\% & 99,86\% & 97,86\%\\
+
+\bottomrule
+
+\end{tabular}
+
+\end{center}
+
+\vspace{0.2cm}
+
+Podemos observar que los resultados obtenidos por nuestro modelado son semejantes a los del paper de referencia.
+
+\begin{block}{Por que puede ganar Random Forest?}
+
+La principal ventaja del random forest reside en que el dataset es fundamentalmente tabular y con datos numéricos, en lo cual se especializa este modelo
+
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Resultados: Conclusiones}
+
+\begin{block}{¿Siempre es mejor el Random Forest?}
+    Veamos el siguiente paper 
+\end{block}
+
+\begin{center}
+    
+Tang, W., \& Fei, L. (2025). \textit{Handwritten digit recognition based on SVM}. In \textbf{Proceedings of the 2024 2nd International Conference on Frontiers of Intelligent Manufacturing and Automation (CFIMA ’24)} (pp. 324–331). Association for Computing Machinery.
+
+\end{center}
+
+Este paper compara algoritmos de machine learning clásicos con deep learning, sobre un dataset compuesto por imágenes de dígitos escritos a mano, donde cada muestra representa un número del 0 al 9.
+
+El paper llega a que MLP obtiene mejores resultados, con accuracy de 78,3\% y F1 de 74\%, contra Random Forest, con accuracy de 64,7\% y F1 de 65,7\%
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Resultados: Conclusiones}
+
+En conclusión, Random forest presenta mejor desempeño en datos tabulares. Sin embargo, podemos afirmar que es necesariamente mejor que MLP?
+
+\vspace{0.3cm}
+
+Como vimos antes, MLP presenta mayor recall que Random Forest. Además, si comparamos las matrices de confusión de ambos modelos, se observa que MLP captura mejor los ataques, es decir, tiene menos cantidad de ataques clasificados como 'Benign'. $(37$ falsos 'Benign' contra $207)$
+
+\vspace{0.3cm}
+
+En un contexto en el que el costo de recibir un ataque sea muy alto, podría ser mejor perder accuracy y reportar falsos ataques, pero capturar todos los ataques.
+
+\begin{block}{Idea general}
+    El resultado depende siempre del contexto, no es absoluto
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Conclusiones finales}
+
+\begin{itemize}
+
+    \item CICIDS-2017 presenta un problema de clasificación tabular con un fuerte desbalance de clases.
+
+    \item El preprocesamiento y SMOTE son fundamentales para obtener una comparación adecuada.
+
+    \item Random Forest resulta especialmente adecuado para este tipo de datasets.
+
+    \item MLP ofrece una mayor flexibilidad, pero requiere mayor cuidado en el escalado y configuración.
+
+    \item Deep Learning no es necesariamente superior por ser más complejo.
+
+    \item La elección debe considerar desempeño, estructura de los datos, costo computacional y costo de error.
+
+\end{itemize}
+
+\vspace{0.3cm}
+
+\begin{block}{Conclusión general}
+\centering
+\textbf{El mejor modelo depende del contexto del problema.}
+\end{block}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Referencias}
+
+\footnotesize
+
+\begin{thebibliography}{9}
+
+\bibitem{ali}
+Ali, M. L. et al. (2025).
+\newblock
+\textit{Deep Learning vs. Machine Learning for Intrusion Detection
+in Computer Networks: A Comparative Study}.
+\newblock Applied Sciences, 15(4), 1903.
+
+\bibitem{hastie}
+Hastie, T., Tibshirani, R. \& Friedman, J. (2009).
+\newblock \textit{The Elements of Statistical Learning}.
+\newblock Springer.
+
+\bibitem{goodfellow}
+Goodfellow, I., Bengio, Y. \& Courville, A. (2016).
+\newblock \textit{Deep Learning}.
+\newblock MIT Press.
+
+\bibitem{hdr}
+Tang, W. \& Fei, L. (2025).
+\newblock
+\textit{Handwritten digit recognition based on SVM}.
+\newblock In \textbf{Proceedings of the 2024 2nd International Conference on
+Frontiers of Intelligent Manufacturing and Automation (CFIMA '24)}
+(pp. 324--331). Association for Computing Machinery.
+
+\end{thebibliography}
+
+\end{frame}
+
+\end{document}
