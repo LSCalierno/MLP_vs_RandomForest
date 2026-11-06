@@ -42,7 +42,7 @@ Para simplificar el problema de clasificación, las etiquetas originales se cons
 | Etiquetas que contienen `Web Attack` | Web Attack |
 | Resto de etiquetas | Other |
 
-De esta manera, el problema queda planteado como una clasificación multiclase con seis categorías principales.
+De esta manera, el problema queda planteado como una clasificación multiclase con siete categorías principales.
 
 El dataset original no se modifica. Los datos procesados utilizados para el modelado se almacenan en `data/processed/`.
 
@@ -129,21 +129,40 @@ Las diferencias respecto del paper pueden estar relacionadas con factores como l
 
 El proyecto está organizado como un repositorio reproducible:
 
-tpfinal_mad1_randomforest_mlp/
+MLP_vs_RandomForest/
 │
 ├── README.md
-├── data/
+├── datos/
 │   ├── raw/
 │   └── processed/
 │
 ├── notebooks/
-│   ├── Exploracion_y_preprocesamiento.ipynb
-│   ├── Modelado.ipynb
-│   └── Resultados.ipynb
-│
-├── src/
-│   └── utils.py
+│   ├── 1_Exploracion_y_preprocesamiento.ipynb
+│   ├── 2_Modelado.ipynb
+│   └── 3_Resultados.ipynb
 │
 ├── reports/
     |── reporte_final.pdf
     └── reporte_final.txt
+
+En la carpeta de datos/raw se encuentr un READ.ME con las instrucciones para obtener los datos. Para reproducir los notebooks, una vez descargados los datos y guardados en la carpeta raw, se deben compilar los notebooks en su respectivo orden.
+
+## 7. Limitaciones y próximos pasos
+
+### Limitaciones
+
+* Desbalance de clases: aunque se aplicó SMOTE para balancear las clases del conjunto de entrenamiento, la generación de observaciones sintéticas no garantiza que se eliminen todas las dificultades asociadas a las clases minoritarias.
+* Dependencia del preprocesamiento: los resultados obtenidos dependen de las decisiones tomadas durante la limpieza, la selección de variables, la codificación y el balanceo del conjunto de datos. Distintas estrategias de preprocesamiento podrían producir resultados diferentes.
+* Configuración de hiperparámetros: los modelos se entrenaron con una configuración predeterminada de hiperparámetros, sin realizar una búsqueda exhaustiva de sus combinaciones. Por lo tanto, no se puede asegurar que los resultados correspondan al mejor rendimiento posible de cada algoritmo.
+
+### Próximos pasos
+
+A partir de las limitaciones identificadas, se proponen las siguientes líneas de trabajo:
+
+* Exploración de hiperparámetros: Explorar más a fondo hiperparámetros más óptimos con el fin de obtener la mejor versión de cada modelo.
+* Mejora del desempeño en clases minoritarias: investigar otras estrategias de balanceo y evaluar su impacto sobre las métricas.
+* Validación más amplia: repetir los experimentos con distintas particiones de los datos y evaluar los modelos sobre conjuntos de tráfico de red diferentes, para estudiar su capacidad de generalización.
+* Para el modelo Random Forest, probar bajar el umbral de decisión para equiparar los ataques no detectados, y analizar el desempeño.
+* Análisis de errores: profundizar en las matrices de confusión para identificar las clases que presentan mayores dificultades de clasificación y estudiar posibles confusiones entre tipos de tráfico.
+
+Estas mejoras permitirían profundizar la comparación entre Random Forest y MLP, comprender mejor sus fortalezas y debilidades y evaluar su posible aplicación en sistemas de detección de intrusiones.

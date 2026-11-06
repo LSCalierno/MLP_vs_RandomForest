@@ -1,4 +1,4 @@
-\documentclass[aspectratio=169,11pt]{beamer}
+\documentclass[aspectratio=169,11pt,draft]{beamer}
 
 \usetheme{Madrid}
 \usecolortheme{default}
@@ -13,6 +13,12 @@
 \usepackage{tikz}
 \usepackage{pgfplots}
 \usepackage{xcolor}
+
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{positioning}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{fit}
+\usetikzlibrary{backgrounds}
 
 \pgfplotsset{compat=1.18}
 
@@ -339,18 +345,94 @@ SMOTE se aplica sobre el conjunto de entrenamiento unicamente
 
 \begin{frame}{Preprocesamiento: Pipeline de preprocesamiento}
 
-\begin{enumerate}
+\begin{figure}[htbp]
 
-    \item Eliminación de duplicados.
-    \item Imputación de valores faltantes por respectiva media.
-    \item Eliminación de valores infinitos.
-    \item Consolidación de etiquetas en variable objetivo.
-    \item División train/test.
-    \item Estandarización.
-    \item Eliminacion de variables correlacionadas.
-    \item SMOTE sobre train.
+\centering
+\resizebox{!}{0.82\textheight}{
 
-\end{enumerate}
+\begin{tikzpicture}[
+    nodo/.style={
+        rectangle,
+        rounded corners=3pt,
+        draw=blue!60!black,
+        fill=blue!5,
+        text width=7cm,
+        minimum height=0.7cm,
+        align=center,
+        font=\small,
+        inner sep=6pt
+    },
+    flecha/.style={
+        -{Stealth[length=2.5mm]},
+        thick,
+        draw=blue!60!black
+    },
+    node distance=0.35cm
+]
+
+\node[nodo] (original) {
+    \textbf{Dataset original}\\
+    2.830.743 filas $\times$ 79 variables
+};
+
+\node[nodo, right=of original] (duplicados) {
+    \textbf{1. Eliminación de duplicados}\\
+    2.522.362 filas $\times$ 79 variables
+};
+
+\node[nodo, below=of duplicados] (faltantes) {
+    \textbf{2. Imputación de valores faltantes}\\
+};
+
+\node[nodo, left=of faltantes] (infinitos) {
+    \textbf{3. Eliminación de valores infinitos}\\
+    2.520.798 filas $\times$ 79 variables\\
+};
+
+\node[nodo, below=of infinitos] (etiquetas) {
+    \textbf{4. Consolidación de etiquetas}\\
+    2.520.798 filas $\times$ 79 variables\\
+    Clasificación en 7 clases
+};
+
+\node[nodo, right=of etiquetas] (division) {
+    \textbf{5. División en entrenamiento y prueba}\\
+    Train: 2.016.638 filas $\times$ 79 variables\\
+    Test: 504.160 filas $\times$ 79 variables\\
+    \textit{78 variables son predictoras}
+};
+
+\node[nodo, below=of division] (escalado) {
+    \textbf{6. Estandarización}\\
+};
+
+\node[nodo, below=of escalado] (correlacion) {
+    \textbf{7. Eliminación de variables correlacionadas}\\
+    Train: 2.016.638 filas $\times$ 44 variables\\
+    Test: 504.160 filas $\times$ 44 variables
+};
+
+\node[nodo, below=of etiquetas] (smote) {
+    \textbf{8. Aplicación de SMOTE sobre entrenamiento}\\
+    Train: 11.732.315 filas $\times$ 44 variables\\
+    Test: 504.160 filas $\times$ 44 variables
+};
+
+\draw[flecha] (original) -- (duplicados);
+\draw[flecha] (duplicados) -- (faltantes);
+\draw[flecha] (faltantes) -- (infinitos);
+\draw[flecha] (infinitos) -- (etiquetas);
+\draw[flecha] (etiquetas) -- (division);
+\draw[flecha] (division) -- (escalado);
+\draw[flecha] (escalado) -- (correlacion);
+\draw[flecha] (correlacion) -- (smote);
+\end{tikzpicture}}
+
+\caption{}
+
+\label{fig:pipeline_preprocesamiento}
+
+\end{figure}
 
 \end{frame}
 
@@ -436,6 +518,116 @@ A continuación se presentan las principales ventajas y limitaciones de este mé
 
 %------------------------------------------------------------------------
 
+\begin{frame}{Random Forest: arquitectura utilizada}
+\centering
+
+\resizebox{!}{0.82\textheight}{
+\begin{tikzpicture}[
+    box/.style={
+        rectangle,
+        rounded corners=3pt,
+        draw=blue!70,
+        fill=blue!10,
+        thick,
+        minimum width=2.5cm,
+        minimum height=0.65cm,
+        align=center,
+        font=\normalsize
+    },
+    tree/.style={
+        box,
+        fill=green!12,
+        draw=green!60!black,
+        minimum width=2cm
+    },
+    arrow/.style={
+        ->,
+        >=Stealth,
+        thick,
+        draw=gray!75
+    },
+    dots/.style={
+        font=\Large,
+        align=center
+    }
+]
+
+% Coordenadas horizontales
+\def\xA{-4.5}
+\def\xB{-1.5}
+\def\xC{1.5}
+\def\xD{4.5}
+
+% Conjunto de entrenamiento
+\node[box] (data) at (0,3.2)
+    {Conjunto de entrenamiento};
+
+% Bootstrap
+\node[box] (bootstrap) at (0,1.9)
+    {Muestreo Bootstrap};
+
+\draw[arrow] (data) -- (bootstrap);
+
+% Muestras bootstrap
+\node[box] (m1) at (\xA,0.5) {Muestra 1};
+\node[box] (m2) at (\xB,0.5) {Muestra 2};
+\node[box] (m100) at (\xD,0.5) {Muestra 30};
+
+% Puntos suspensivos
+\node[dots] at (\xC,0.5) {$\cdots$};
+
+% Conexiones bootstrap
+\draw[arrow] (bootstrap) -- (m1);
+\draw[arrow] (bootstrap) -- (m2);
+\draw[arrow] (bootstrap) -- (m100);
+
+% Árboles de decisión
+\node[tree] (t1) at (\xA,-0.8) {Árbol 1};
+\node[tree] (t2) at (\xB,-0.8) {Árbol 2};
+\node[tree] (t100) at (\xD,-0.8) {Árbol 30};
+
+\node[dots] at (\xC,-0.8) {$\cdots$};
+
+% Conexiones con los árboles
+\draw[arrow] (m1) -- (t1);
+\draw[arrow] (m2) -- (t2);
+\draw[arrow] (m100) -- (t100);
+
+% Predicciones
+\node[box] (p1) at (\xA,-2.1) {Predicción 1};
+\node[box] (p2) at (\xB,-2.1) {Predicción 2};
+\node[box] (p100) at (\xD,-2.1) {Predicción 30};
+
+\node[dots] at (\xC,-2.1) {$\cdots$};
+
+% Conexiones con predicciones
+\draw[arrow] (t1) -- (p1);
+\draw[arrow] (t2) -- (p2);
+\draw[arrow] (t100) -- (p100);
+
+% Votación mayoritaria
+\node[box, fill=orange!15, draw=orange!80!black,
+      minimum width=3.2cm] (vote) at (0,-3.3)
+    {Votación mayoritaria};
+
+\draw[arrow] (p1) -- (vote);
+\draw[arrow] (p2) -- (vote);
+\draw[arrow] (p100) -- (vote);
+
+% Resultado final
+\node[box, fill=blue!20, minimum width=3.2cm]
+    (result) at (0,-4.4)
+    {Clase predicha};
+
+\draw[arrow] (vote) -- (result);
+
+\end{tikzpicture}
+}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
 \begin{frame}{Random Forest: hiperparámetros elegidos}
 
 Se eligieron los siguientes hiperparámetros:
@@ -450,9 +642,8 @@ Se eligieron los siguientes hiperparámetros:
 
 \midrule
 
-\texttt{n\_estimators} & 100\\
+\texttt{n\_estimators} & 30\\
 \texttt{random\_state} & 42\\
-\texttt{n\_jobs} & 1\\
 
 \bottomrule
 
@@ -461,15 +652,29 @@ Se eligieron los siguientes hiperparámetros:
 \end{center}
 
 \begin{itemize}
-    \item \texttt{n\_estimators}: cantidad de árboles de decisión. Elegido como balance entre capacidad de predicción y costo computacional.
+    \item \texttt{n\_estimators}: cantidad de árboles de decisión. Elegido empíricamente probando varias arquitecturas.
     \item \texttt{random\_state}: Fijación de semilla aleatoria. No aporta ventaja estadística
-    \item \texttt{n\_jobs}: cantidad de procesos utilizados. Se eligió 1 empíricamente para menor costo computacional
 \end{itemize}
 
 \vspace{0.3cm}
 
-El resto de hiperparámetros utilizados se dejaron por defecto los de la librería sklearn
+El resto de hiperparámetros utilizados se dejaron por defecto los de la librería sklearn. Las justificaciones están en el notebook 2\_modelado, celda 7, Markdown.
 
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Random Forest: Curva de entrenamiento}
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{Error_OOB.png}
+        \caption{Curva de error OOB para distintas cantidades de árboles}
+        \label{fig:placeholder}
+    \end{figure}
+
+En la imagen se puede observar que el punto de quiebre se da en 20 árboles, y que el error OOB no mejora luego de los 30 árboles, lo que da la justificación de la arquitectura.
+    
 \end{frame}
 
 %------------------------------------------------------------------------
@@ -570,7 +775,7 @@ Se utilizó la siguiente arquitectura
 \rightarrow
 \boxed{50}
 \rightarrow
-\boxed{\text{6 clases}}
+\boxed{\text{7 clases}}
 \]
 
 \end{center}
@@ -582,6 +787,143 @@ Se utilizó la siguiente arquitectura
     \item Optimizador: Adam. Método basado en descenso por gradiente
     \item Capa de salida multiclase. Es la encargada de realizar las predicciones.
 \end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: Comparación de arquitecturas}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{Curvas_MLP.png}
+        \caption{Comparación de curvas de pérdida y validación}
+        \label{fig:placeholder}
+    \end{figure}
+    A partir de las curvas, se puede observar que la arquitectura de dos capas ocultas, de 100 y 50 neuronas, respectivamente, presenta mejor desempeño.
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{MLP: arquitectura utilizada}
+\centering
+
+\begin{tikzpicture}[
+    neuron/.style={
+        circle,
+        draw=blue!70,
+        fill=blue!10,
+        thick,
+        minimum size=5mm,
+        inner sep=0pt
+    },
+    connection/.style={
+        draw=gray!55,
+        thin
+    },
+    layerlabel/.style={
+        font=\small\bfseries,
+        align=center
+    }
+]
+
+% Posiciones horizontales
+\def\xA{0}
+\def\xB{3.5}
+\def\xC{7}
+\def\xD{10.5}
+
+% Separación vertical
+\def\sep{0.65}
+
+% --------------------------------
+% CAPA DE ENTRADA
+% --------------------------------
+
+\foreach \i in {0,1,2,4,5,6} {
+    \pgfmathsetmacro{\y}{2.2-\i*\sep}
+    \node[neuron] (A\i) at (\xA,\y) {};
+}
+
+\node at (\xA,0.325) {\Large $\vdots$};
+
+% --------------------------------
+% PRIMERA CAPA OCULTA
+% --------------------------------
+
+\foreach \i in {0,1,2,4,5,6} {
+    \pgfmathsetmacro{\y}{2.2-\i*\sep}
+    \node[neuron] (B\i) at (\xB,\y) {};
+}
+
+\node at (\xB,0.325) {\Large $\vdots$};
+
+% --------------------------------
+% SEGUNDA CAPA OCULTA
+% --------------------------------
+
+\foreach \i in {0,1,2,4,5,6} {
+    \pgfmathsetmacro{\y}{2.2-\i*\sep}
+    \node[neuron] (C\i) at (\xC,\y) {};
+}
+
+\node at (\xC,0.325) {\Large $\vdots$};
+
+% --------------------------------
+% CAPA DE SALIDA (7 CLASES)
+% --------------------------------
+
+\foreach \i in {0,...,6} {
+    \pgfmathsetmacro{\y}{2.2-\i*0.65}
+    \node[neuron] (D\i) at (\xD,\y) {};
+}
+
+% --------------------------------
+% CONEXIONES
+% --------------------------------
+
+% Entrada -> Capa oculta 1
+\foreach \a in {0,1,2,4,5,6} {
+    \foreach \b in {0,1,2,4,5,6} {
+        \draw[connection] (A\a) -- (B\b);
+    }
+}
+
+% Capa oculta 1 -> Capa oculta 2
+\foreach \a in {0,1,2,4,5,6} {
+    \foreach \b in {0,1,2,4,5,6} {
+        \draw[connection] (B\a) -- (C\b);
+    }
+}
+
+% Capa oculta 2 -> Salida
+\foreach \a in {0,1,2,4,5,6} {
+    \foreach \b in {0,...,6} {
+        \draw[connection] (C\a) -- (D\b);
+    }
+}
+
+% --------------------------------
+% ETIQUETAS
+% --------------------------------
+
+\node[layerlabel] at (\xA,-2.6)
+    {Entrada\\44 variables};
+
+\node[layerlabel] at (\xB,-2.6)
+    {Capa oculta 1\\100 neuronas\\ReLU};
+
+\node[layerlabel] at (\xC,-2.6)
+    {Capa oculta 2\\50 neuronas\\ReLU};
+
+\node[layerlabel] at (\xD,-2.6)
+    {Salida\\7 clases};
+
+\end{tikzpicture}
+
+\vspace{0.4cm}
+
+\small
+Representación gráfica de la arquitectura utilizada.
 
 \end{frame}
 
@@ -610,8 +952,7 @@ Los principales hiperparámetros utilizados fueron:
 \texttt{solver} & Adam\\
 \texttt{alpha} & 0.0001\\
 \texttt{batch\_size} & 512\\
-\texttt{learning\_rate\_init} & 0.0001\\
-\texttt{max\_iter} & 100\\
+\texttt{learning\_rate\_init} & 0.001\\
 \texttt{early\_stopping} & True\\
 \texttt{validation\_fraction} & 0.1\\
 \texttt{n\_iter\_no\_change} & 5\\
@@ -621,6 +962,8 @@ Los principales hiperparámetros utilizados fueron:
 \end{tabular}
 
 \end{center}
+
+La elección de los hiperparámetros está explicada en el notebook de modelado, celda 11, markdown.
 
 \end{frame}
 
@@ -632,27 +975,28 @@ Los resultados generales del modelo fueron:
 
 \vspace{0.4cm}
 
+\begin{center}
 \begin{tabular}{c|c|c|c|c}
 
 \toprule
 
-Modelo & Accuracy & Precision (macro) & Recall (macro) & F1-score (macro) \\
+Modelo & Accuracy (\%) & Precision (\%) & Recall (\%) & F1-score (\%)\\
 
 \midrule
 
 MLP & 0.97 & 0.69 & 0.99 & 0.75 \\
 
-\midrule
 
 Random Forest & 0.99 & 0.94 & 0.98 & 0.96 \\
 
 \bottomrule
 
 \end{tabular}
+\end{center}
 
 \vspace{0.4cm}
 
-Podemos observar que el modelo Random forest supera al MLP en Accuracy, Precision y F1-score, mientras que el modelo MLP presenta mayor Recall
+Podemos observar que el modelo Random forest supera al MLP en Accuracy, Precision (macro) y F1-score (macro) , mientras que el modelo MLP presenta mayor Recall (macro).
 
 \vspace{0.3cm}
 
@@ -674,7 +1018,7 @@ Podemos observar que el modelo Random forest supera al MLP en Accuracy, Precisio
 
 \vspace{0.1cm}
 
-Se presentan las matrices de confusión de ambos modelos, que comparan la clase real vs la clase predicha. 
+Se presentan las matrices de confusión de ambos modelos, que comparan la clase real vs la clase predicha. Notar que Random Forest tiene mejor desempeño general, pero deja pasar mayor cantidad de ataques como 'Benign' (37 contra 214).
 
 \end{frame}
 
@@ -687,8 +1031,6 @@ Se presentan las matrices de confusión de ambos modelos, que comparan la clase 
 \includegraphics[width=0.5\textwidth]{Curvas_ROC.png}
 
 \end{center}
-
-\vspace{0.1cm}
 
 Se observa que ambos modelos presentan una curva casi perfectamente cuadrada, lo que refleja el buen desempeño de los modelos.
 
@@ -710,9 +1052,7 @@ Se observa que ambos modelos presentan una curva casi perfectamente cuadrada, lo
 
 Accuracy & 99,88\% & 97,00\% & 99,86\% & 97,42\%\\
 
-F1 macro & 97,46\% & 82,00\% & 96,08\% & 75,28\%\\
-
-F1 ponderado & 100,00\% & 98,00\% & 99,86\% & 97,86\%\\
+F1 macro & 97,46\% & 82,00\% & 96,14\% & 75,28\%\\
 
 \bottomrule
 
@@ -722,53 +1062,114 @@ F1 ponderado & 100,00\% & 98,00\% & 99,86\% & 97,86\%\\
 
 \vspace{0.2cm}
 
-Podemos observar que los resultados obtenidos por nuestro modelado son semejantes a los del paper de referencia.
-
-\begin{block}{Por que puede ganar Random Forest?}
-
-La principal ventaja del random forest reside en que el dataset es fundamentalmente tabular y con datos numéricos, en lo cual se especializa este modelo
-
-\end{block}
+Podemos observar que los resultados obtenidos por nuestro modelado son semejantes a los del paper de referencia, con la única diferencia significativa presente en el F1-score macro del MLP, con una diferencia de 6,72\%. 
 
 \end{frame}
 
 %------------------------------------------------------------------------
 
-\begin{frame}{Resultados: Conclusiones}
+\begin{frame}{Análisis crítico: ¿Random Forest es mejor?}
 
-\begin{block}{¿Siempre es mejor el Random Forest?}
-    Veamos el siguiente paper 
+Como hemos visto, el Random Forest, siendo un modelo de machine learning clásico, superó en términos de accuracy y F1-score al modelo MLP, siendo un modelo avanzado. Veamos las causas:
+
+\vspace{0.3cm}
+
+\begin{block}{¿Por qué puede ganar el Random Forest?}
+    \begin{itemize}
+        \item Datos tabulares: Random forest suele captar bien las relaciones no lineales de variables numéricas.
+        \item Los múltiples árboles que particionan el espacio de variables permiten captar las interacciones entre características que pueden ser difíciles para un MLP.
+        \item El MLP requiere mayor ajuste de hiperparámetros, lo que pudo verse afectado al no realizar una búsqueda exhaustiva.
+        \item El desbalance entre clases afecta mucho el aprendizaje del MLP en las clases minoritarias
+    \end{itemize}
 \end{block}
+
+\vspace{0.2cm}
+
+Entonces, ¿podemos afirmar que el modelo Random Forest es mejor?
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Análisis crítico: ¿Cuando gana MLP?}
+
+¿Cuando puede ganar el modelo MLP?
+
+\begin{itemize}
+    \item Datos con relaciones altamente no lineales, ya que las múltiples capas de neuronas pueden aprender funciones más complejas.
+    \item Grandes volúmenes de datos, que aportan complejidad al modelo.
+    \item Datos de alta dimensionalidad.
+    \item Datos no tabulares, como datos con estructura espacial. Se especializa en relacionar imágenes o audios.
+\end{itemize}
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{Análisis Crítico: El rol del costo computacional }
+
+Otro factor influyente en la elección de un modelo es el costo computacional. Existen varias razones para tenerlo en cuenta en el modelado de un sistema de detección de intrusión:
+
+\begin{itemize}
+    \item Tiempo de predicción: El modelo debe clasificar el flujo de red rápidamente, para poder actuar ante un ataque, antes de recibir daños o infiltraciones.
+    \item Uso de recursos: El modelo mantener un costo computacional eficiente, debido a que tiene que mantener el funcionamiento a lo largo del tiempo.
+    \item Volumen de tráfico: El modelo debe ser capaz de analizar grandes volúmenes de datos en tiempo real, sin acumular retrasos con la detección.
+\end{itemize}
+
+En nuestro problema, si bien Random Forest presenta mejores métricas, cada muestra debe recorrer múltiple árboles antes de tomar una decisión, lo que puede llevar a un mayor tiempo de detección. En este modelo, el entrenamiento tomó 9min y las predicciones tardaron 0,6 seg.
+
+Por otro lado, si bien el modelo MLP suele ser más costoso de entrenar en términos de memoria, una vez entrenado, puede realizar las predicciones con mayor velocidad. En este modelo, el entrenamiento tomó 6min y las predicciones tardaron 0,4 seg.
+
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{¿Cuando gana el aprendizaje profundo?}
+
+\begin{block}{Veamos el siguiente paper: }
+    Tang, W., \& Fei, Li. (2025). \textit{Handwritten digit recognition based on SVM}. In \textbf{Proceedings of the 2024 2nd International Conference on Frontiers of Intelligent Manufacturing and Automation (CFIMA ’24)} (pp. 324–331).
+\end{block}
+
+El paper trabaja sobre el dataset EMNIST, que es un conjunto de datos de imágenes en escala de grises de caracteres manuscritos, que incluyen tanto dígitos y letras en mayúscula y minúscula. El paper detalla las siguientes características en la sección 3.1:
+
+\begin{itemize}
+    \item Imagenes: escala de grises, de 28x28 pixeles.
+    \item Variables: 784 valores de píxeles por cada imagen.
+    \item Clases: 62 categorías, 10 dígitos, 26 mayúsculas y 26 minúsculas.
+    \item Tamaño: 814 imágenes en total.
+    \item Aplicación: reconocimiento y clasificación automática de caracteres manuscritos
+\end{itemize}
+
+    
+\end{frame}
+
+%------------------------------------------------------------------------
+
+\begin{frame}{¿Cuando gana el aprendizaje profundo?}
+
+El dataset, en la sección 4.2 compara varios modelos de machine learning, entre ellos compara el Random Forest con el MLP, y las métricas obtenidas fueron:
+
+\vspace{0.4cm}
 
 \begin{center}
-    
-Tang, W., \& Fei, L. (2025). \textit{Handwritten digit recognition based on SVM}. In \textbf{Proceedings of the 2024 2nd International Conference on Frontiers of Intelligent Manufacturing and Automation (CFIMA ’24)} (pp. 324–331). Association for Computing Machinery.
-
+    \begin{tabular}{c|c|c|c|c}
+        \toprule
+        Modelo & Accuracy (\%) & Precision (\%) & Recall (\%) & F1-score (\%) \\
+        \midrule
+        Random Forest & 64.7 & 69.5 & 62.3 & 65.7 \\
+        MLP & 78.3 & 73.3 & 74.4 & 74\\
+        \bottomrule
+    \end{tabular}
 \end{center}
 
-Este paper compara algoritmos de machine learning clásicos con deep learning, sobre un dataset compuesto por imágenes de dígitos escritos a mano, donde cada muestra representa un número del 0 al 9.
+Podemos observar que el modelo MLP obtiene mejores resultados que el modelo Random Forest. Esto sucede por diversas ventajas del MLP sobre el Random Forest, que incluyen:
 
-El paper llega a que MLP obtiene mejores resultados, con accuracy de 78,3\% y F1 de 74\%, contra Random Forest, con accuracy de 64,7\% y F1 de 65,7\%
-
-\end{frame}
-
-%------------------------------------------------------------------------
-
-\begin{frame}{Resultados: Conclusiones}
-
-En conclusión, Random forest presenta mejor desempeño en datos tabulares. Sin embargo, podemos afirmar que es necesariamente mejor que MLP?
-
-\vspace{0.3cm}
-
-Como vimos antes, MLP presenta mayor recall que Random Forest. Además, si comparamos las matrices de confusión de ambos modelos, se observa que MLP captura mejor los ataques, es decir, tiene menos cantidad de ataques clasificados como 'Benign'. $(37$ falsos 'Benign' contra $207)$
-
-\vspace{0.3cm}
-
-En un contexto en el que el costo de recibir un ataque sea muy alto, podría ser mejor perder accuracy y reportar falsos ataques, pero capturar todos los ataques.
-
-\begin{block}{Idea general}
-    El resultado depende siempre del contexto, no es absoluto
-\end{block}
+\begin{itemize}
+    \item Estructura espacial: los píxeles vecinos están relacionados y forman patrones locales, como bordes, trazos y curvas. 
+    \item Alta dimensionalidad: cada imagen de 28 × 28 píxeles contiene 784 variables de entrada.
+    \item Variables poco interpretables individualmente: el valor de un píxel aislado aporta poca información.
+    \item Relaciones entre las variables complejas.
+\end{itemize}
 
 \end{frame}
 
@@ -776,29 +1177,37 @@ En un contexto en el que el costo de recibir un ataque sea muy alto, podría ser
 
 \begin{frame}{Conclusiones finales}
 
+Finalmente, analizando todas los resultados, tenemos lo siguiente para  elegir un modelo:
+
+\begin{columns}[T]
+
+\column{0.48\textwidth}
+
+\begin{block}{Ventajas RF}
 \begin{itemize}
-
-    \item CICIDS-2017 presenta un problema de clasificación tabular con un fuerte desbalance de clases.
-
-    \item El preprocesamiento y SMOTE son fundamentales para obtener una comparación adecuada.
-
-    \item Random Forest resulta especialmente adecuado para este tipo de datasets.
-
-    \item MLP ofrece una mayor flexibilidad, pero requiere mayor cuidado en el escalado y configuración.
-
-    \item Deep Learning no es necesariamente superior por ser más complejo.
-
-    \item La elección debe considerar desempeño, estructura de los datos, costo computacional y costo de error.
-
+    \item Mejor accuracy, precision y F1-score.
+    \item Menor cantidad de falsas alarmas.
+    \item Se puede ajustar el umbral de decisión.
 \end{itemize}
-
-\vspace{0.3cm}
-
-\begin{block}{Conclusión general}
-\centering
-\textbf{El mejor modelo depende del contexto del problema.}
 \end{block}
 
+\column{0.48\textwidth}
+
+\begin{block}{Ventajas MLP}
+\begin{itemize}
+    \item Mayor recall.
+    \item Menor cantidad de ataques no detectados.
+    \item Menor tiempo de entrenamiento.
+    \item Menor tiempo de predicción.
+\end{itemize}
+\end{block}
+
+\end{columns}
+
+\vspace{0.4cm}
+
+Teniendo en cuenta que el modelo MLP deja pasar menor cantidad de ataques, y actúa con mayor velocidad que el Random Forest, considero que puede ser una mejor alternativa a la hora de elegir un modelo de detección de intrusión en redes.
+    
 \end{frame}
 
 %------------------------------------------------------------------------
@@ -810,7 +1219,7 @@ En un contexto en el que el costo de recibir un ataque sea muy alto, podría ser
 \begin{thebibliography}{9}
 
 \bibitem{ali}
-Ali, M. L. et al. (2025).
+Ali, M. Li. et al. (2025).
 \newblock
 \textit{Deep Learning vs. Machine Learning for Intrusion Detection
 in Computer Networks: A Comparative Study}.

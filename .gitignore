@@ -1,11 +1,15 @@
+# Datasets
+Datos/raw/
+Datos/processed/
+
+# macOS
 .DS_Store
+**/.DS_Store
 
-Datos/processed/*
-Datos/raw/*
-!Datos/raw/.gitkeep
-!Datos/processed/.gitkeep
+# R
+.Rhistory
 
-
-
-
-
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
